@@ -19,8 +19,37 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/ws", s.hub.handler(s.store))
 	mux.HandleFunc("/options", s.getOptions)
 	mux.HandleFunc("/vote", s.postVote)
-	mux.HandleFunc("/option", s.postOption)
+	mux.HandleFunc("/myvotes", s.getMyVotes)
+	mux.HandleFunc("/option", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			s.deleteOption(w, r)
+		} else if r.Method == http.MethodPost {
+			s.postOption(w, r)
+		}
+	})
 	return mux
+}
+
+func (s *Server) getMyVotes(w http.ResponseWriter, r *http.Request) {
+	fp := r.URL.Query().Get("fp")
+	if fp == "" {
+		http.Error(w, "missing fingerprint", 400)
+		return
+	}
+	rows, err := s.store.db.Query(r.Context(),
+		`SELECT option_id FROM votes WHERE fingerprint=$1`, fp)
+	if err != nil {
+		http.Error(w, "db error", 500)
+		return
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		rows.Scan(&id)
+		ids = append(ids, id)
+	}
+	json.NewEncoder(w).Encode(ids)
 }
 
 func (s *Server) getOptions(w http.ResponseWriter, r *http.Request) {
@@ -41,11 +70,10 @@ func (s *Server) postVote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad body", 400)
 		return
 	}
-	if err := s.store.Vote(r.Context(), req.OptionID, req.Fp); err != nil {
+	if err := s.store.ToggleVote(r.Context(), req.OptionID, req.Fp); err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	// всем рассылаем обновлённый список
 	s.hub.notifyOptions(s.store)
 	w.WriteHeader(204)
 }

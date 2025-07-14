@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"sync"
 
@@ -32,22 +34,28 @@ func (h *Hub) handler(store *Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := up.Upgrade(w, r, nil)
 		if err != nil {
+			log.Println("upgrade error:", err)
 			return
 		}
 		h.mu.Lock()
 		h.clients[c] = true
 		h.mu.Unlock()
-		// отправляем стартовый список
-		opts, _ := store.ListOptions(r.Context())
-		c.WriteJSON(opts)
+
+		// отправляем текущие данные при подключении
+		opts, err := store.ListOptions(r.Context())
+		if err != nil {
+			log.Println("list error:", err)
+			return
+		}
+		if err := c.WriteJSON(opts); err != nil {
+			log.Println("write error:", err)
+		}
 	}
 }
 
 func (h *Hub) notifyOptions(store *Store) {
-	opts, err := store.ListOptions(rCtx())
+	opts, err := store.ListOptions(context.Background())
 	if err == nil {
 		h.broadcast(opts)
 	}
 }
-
-func rCtx() *http.Request { return &http.Request{} } // stub for ctx

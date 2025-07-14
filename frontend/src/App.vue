@@ -1,9 +1,14 @@
 <template>
-  <main class="p-4 max-w-xl mx-auto">
-    <h1 class="text-2xl mb-4">Голосование</h1>
-    <VoteList :options="options" :fp="fp" @voted="fetchOptions" />
-    <AddOption @added="fetchOptions" />
-  </main>
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0">Голосование</h3>
+    </div>
+    <div class="card-body">
+      <VoteList :options="options" :fp="fp" :admin="isAdmin" @voted="fetchOptions" @deleted="fetchOptions" />
+      <hr class="my-4" />
+      <AddOption @added="fetchOptions" />
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -14,9 +19,15 @@ import AddOption from './components/AddOption.vue'
 
 const options = ref([])
 const fp = ref('')
+const isAdmin = ref(false)
 
 const fetchOptions = () => {
-  fetch('/options').then(r => r.json()).then(data => options.value = data)
+  fetch('/options')
+    .then(r => r.json())
+    .then(data => {
+      // сортировка по убыванию голосов
+      options.value = data.sort((a, b) => b.votes - a.votes)
+    })
 }
 
 onMounted(() => {
@@ -25,7 +36,13 @@ onMounted(() => {
   })
   fetchOptions()
 
+  const urlParams = new URLSearchParams(window.location.search)
+  isAdmin.value = urlParams.get('admin') === '1'
+
   const ws = new WebSocket(`ws://${location.host}/ws`)
-  ws.onmessage = e => { options.value = JSON.parse(e.data) }
+  ws.onmessage = e => {
+    const data = JSON.parse(e.data)
+    options.value = data.sort((a, b) => b.votes - a.votes)
+  }
 })
 </script>

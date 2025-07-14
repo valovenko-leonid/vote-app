@@ -1,9 +1,15 @@
 <template>
-  <form @submit.prevent="add">
-    <input v-model="text" placeholder="Новый вариант"
-           class="border p-1 mr-2" maxlength="40">
-    <button class="bg-green-600 text-white px-2 rounded"
-            :disabled="loading">Добавить</button>
+  <form @submit.prevent="add" class="row g-2">
+    <div class="col-9">
+      <input v-model="text" type="text"
+             class="form-control"
+             placeholder="Новый вариант (макс. 40 символов)"
+             maxlength="40" required>
+    </div>
+    <div class="col-3">
+      <button class="btn btn-success w-100"
+              :disabled="loading">Добавить</button>
+    </div>
   </form>
 </template>
 
