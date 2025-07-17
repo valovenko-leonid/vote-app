@@ -3,6 +3,8 @@ FROM nginx:1.27-alpine
 # Установим certbot
 RUN apk add --no-cache certbot bash curl
 
+ARG ENV
+
 COPY ./${ENV}.conf /etc/nginx/conf.d/default.conf
 COPY ./init-certbot.sh /init-certbot.sh
 
