@@ -55,7 +55,7 @@ func (s *Store) AddOption(ctx context.Context, text string) (Option, error) {
 	return Option{ID: id, Text: text, Votes: 0}, nil
 }
 
-func (s *Store) ToggleVote(ctx context.Context, optionID int, fp string) error {
+func (s *Store) ToggleVote(ctx context.Context, optionID int, userID string) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func (s *Store) ToggleVote(ctx context.Context, optionID int, fp string) error {
 	// проверяем, голосует ли повторно (для снятия)
 	var exists bool
 	err = tx.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM votes WHERE option_id=$1 AND fingerprint=$2)`, optionID, fp).Scan(&exists)
+		`SELECT EXISTS(SELECT 1 FROM votes WHERE option_id=$1 AND user_id=$2)`, optionID, userID).Scan(&exists)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (s *Store) ToggleVote(ctx context.Context, optionID int, fp string) error {
 	if exists {
 		// снимаем голос
 		_, err = tx.Exec(ctx,
-			`DELETE FROM votes WHERE option_id=$1 AND fingerprint=$2`, optionID, fp)
+			`DELETE FROM votes WHERE option_id=$1 AND user_id=$2`, optionID, userID)
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,7 @@ func (s *Store) ToggleVote(ctx context.Context, optionID int, fp string) error {
 		// проверяем общее число голосов
 		var count int
 		err = tx.QueryRow(ctx,
-			`SELECT COUNT(*) FROM votes WHERE fingerprint=$1`, fp).Scan(&count)
+			`SELECT COUNT(*) FROM votes WHERE user_id=$1`, userID).Scan(&count)
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func (s *Store) ToggleVote(ctx context.Context, optionID int, fp string) error {
 		}
 
 		// добавляем голос
-		_, err = tx.Exec(ctx, `INSERT INTO votes(option_id, fingerprint) VALUES($1, $2)`, optionID, fp)
+		_, err = tx.Exec(ctx, `INSERT INTO votes(option_id, user_id) VALUES($1, $2)`, optionID, userID)
 		if err != nil {
 			return err
 		}

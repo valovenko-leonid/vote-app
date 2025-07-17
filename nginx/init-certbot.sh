@@ -35,3 +35,5 @@ echo ">>> Список .conf-файлов в /etc/nginx/conf.d:"
 ls -la /etc/nginx/conf.d/
 cat /etc/nginx/conf.d/default.conf
 nginx -g "daemon off;"
+
+

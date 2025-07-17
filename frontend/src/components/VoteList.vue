@@ -29,26 +29,35 @@
 <script setup>
 import { ref, watch } from 'vue'
 
-const props = defineProps({ options: Array, fp: String, admin: Boolean })
+const props = defineProps({
+  options: Array,
+  userId: String,
+  admin: Boolean,
+})
 const emit = defineEmits(['voted', 'deleted'])
 
 const voted = ref(new Set())
 const loading = ref(false)
 
 const fetchMyVotes = async () => {
-  const res = await fetch(`/myvotes?fp=${props.fp}`)
+  const res = await fetch(`/myvotes?user_id=${props.userId}`)
   const ids = await res.json()
   voted.value = new Set(ids)
+
+  console.log(voted);
+  
 }
 
 const hasVoted = (id) => voted.value.has(id)
 
 const toggleVote = async (id) => {
   loading.value = true
+
+  
   const res = await fetch('/vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ option_id: id, fp: props.fp })
+    body: JSON.stringify({ option_id: id, user_id: props.userId })
   })
   loading.value = false
 
@@ -64,7 +73,7 @@ const deleteOption = async (id) => {
   await fetch(`/option?id=${id}`, { method: 'DELETE' })
   emit('deleted')
 }
-watch(() => props.fp, (newFp) => {
-  if (newFp) fetchMyVotes()
+watch(() => props.userId, (new_userId) => {
+  if (new_userId) fetchMyVotes()
 }, { immediate: true })
 </script>
