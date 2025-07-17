@@ -9,6 +9,7 @@
 *.dylib
 
 /.env
+/data/certbot/conf/
 
 # Test binary, built with `go test -c`
 *.test
