@@ -73,6 +73,7 @@ onMounted(() => {
   isAdmin.value = urlParams.get('admin') === '1'
 
   const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
+  
   ws.onmessage = e => {
     const data = JSON.parse(e.data)
     options.value = data.sort((a, b) => b.votes - a.votes)
