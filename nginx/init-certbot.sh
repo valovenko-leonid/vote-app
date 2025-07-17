@@ -2,41 +2,36 @@
 set -e
 
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-PRECERT_CONF="/etc/nginx/conf.d/pre-cert.conf"
-DEFAULT_CONF="/etc/nginx/conf.d/default.conf"
-NGINX_LOG=/var/log/nginx/error.log
+PRECERT_CONF="/etc/nginx/pre-cert.conf"
+DEV_CONF="/etc/nginx/development.conf"
+PROD_CONF="/etc/nginx/production.conf"
 
-# Если ENV не production — сразу запускаем nginx
-if [ "$ENV" != "production" ]; then
-  echo ">>> Не production-окружение. Запускаем nginx..."
-  nginx -g "daemon off;"
-  exit 0
-fi
-
-# Если сертификат уже есть — запускаем nginx с боевым конфигом
-if [ -f "$CERT_PATH" ]; then
-  echo ">>> Сертификат найден. Запускаем nginx с default.conf..."
-  cp "$DEFAULT_CONF" /etc/nginx/conf.d/default.conf
-  nginx -g "daemon off;"
-  exit 0
-fi
-
-# Если сертификата нет — сначала запускаем nginx с pre-cert конфигом
-echo ">>> Сертификат не найден. Запускаем nginx с pre-cert конфигом..."
+rm -f /etc/nginx/conf.d/*.conf
 cp "$PRECERT_CONF" /etc/nginx/conf.d/default.conf
-nginx
 
-echo ">>> Пытаемся получить сертификат..."
-if certbot certonly --webroot -w /var/www/certbot \
-  --email "$EMAIL" --agree-tos --no-eff-email -d "$DOMAIN"; then
+# Не production → запускаем дев-конфиг
+if [ "$ENV" != "production" ]; then
+  echo ">>> dev-окружение. Запускаем nginx..."
+  cp "$DEV_CONF" /etc/nginx/conf.d/default.conf
 
-  echo ">>> Сертификат успешно получен. Перезапускаем nginx с default.conf..."
-  cp "$DEFAULT_CONF" /etc/nginx/conf.d/default.conf
-  nginx -s reload
-else
-  echo ">>> Не удалось получить сертификат. Остаёмся на pre-cert.conf"
-  tail -f "$NGINX_LOG"
+  echo ">>> Список .conf-файлов в /etc/nginx/conf.d:"
+ls -la /etc/nginx/conf.d/
+cat /etc/nginx/conf.d/default.conf
+  nginx -g "daemon off;"
+  exit 0
 fi
 
-# Оставляем nginx работать в foreground
+# Production, проверка сертификата
+if [ -f "$CERT_PATH" ]; then
+  echo ">>> Сертификат найден. Запускаем nginx с production.conf..."
+  cp "$PROD_CONF" /etc/nginx/conf.d/default.conf
+else
+  echo ">>> Сертификат НЕ найден. Запускаем nginx с pre-cert.conf..."
+  cp "$PRECERT_CONF" /etc/nginx/conf.d/default.conf
+fi
+
+
+echo ">>> Список .conf-файлов в /etc/nginx/conf.d:"
+ls -la /etc/nginx/conf.d/
+cat /etc/nginx/conf.d/default.conf
 nginx -g "daemon off;"
